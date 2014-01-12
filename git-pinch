@@ -1,0 +1,86 @@
+#!/bin/bash
+
+SUBDIRECTORY_OK=Yes
+OPTIONS_SPEC="\
+git pinch [--upstream <upstream>] <commit>...
+
+If <upstream> is not specified, the current branch's upstream will be used.  If
+you are currently not on any branch or if the current branch does not have a
+configured upstream the command will abort.
+--
+h                  show usage
+no-edit            do not edit message before committing
+p,preserve-merges  try to recreate merges instead of ignoring them
+upstream=          base off given commit instead of upstream
+"
+source "$(git --exec-path)/git-sh-setup"
+set_reflog_action pinch
+cd_to_toplevel
+
+NO_EDIT=
+PRESERVE_MERGES=
+UPSTREAM='@{u}'
+
+while test $# -gt 0; do
+    OPT="$1"
+    shift
+    case $OPT in
+        --) break ;;
+        --upstream) UPSTREAM="$1"; shift ;;
+        --no-edit) NO_EDIT="$OPT" ;;
+        -p) PRESERVE_MERGES="$OPT" ;;
+    esac
+done
+
+if test $# -lt 1
+then
+    die "Must provide a list of commits to pinch."
+fi
+
+set -o errexit
+set -o pipefail
+set -o nounset
+
+UPSTREAM=$(git rev-parse --verify $UPSTREAM)
+ORIG_BRANCH=$(git rev-parse --abbrev-ref --verify HEAD)
+ORIG_HEAD=$(git rev-parse --verify HEAD)
+TEMP_BRANCH=pinch
+
+if test "$ORIG_BRANCH" == "HEAD"
+then
+    die "You are not currently on a branch."
+fi
+
+# rewind to upstream
+git reset --quiet --hard $UPSTREAM
+
+BASE=$UPSTREAM
+for COMMIT in "$@"
+do
+    # expand commit hash as a means to normalize it
+    COMMIT=$(git rev-parse --verify $COMMIT)
+
+    git branch --quiet --force $TEMP_BRANCH $COMMIT
+
+    # the first commit has linear history so the rebase is unnecessary
+    HEAD=$(git rev-parse --verify $ORIG_BRANCH)
+    if test "$HEAD" != "$BASE"
+    then
+        git rebase --quiet $PRESERVE_MERGES --onto $ORIG_BRANCH $BASE $TEMP_BRANCH
+        git checkout --quiet $ORIG_BRANCH
+    fi
+
+    git merge $NO_EDIT --quiet --log --no-ff $TEMP_BRANCH
+    BASE=$COMMIT
+done
+
+# if the last commit is not also the original head then we still need to pull
+# in the remaining commits
+if test "$BASE" != "$ORIG_HEAD"
+then
+    git checkout --quiet -B $TEMP_BRANCH
+    git branch --quiet --force $ORIG_BRANCH $ORIG_HEAD
+    git rebase --quiet $PRESERVE_MERGES --onto $TEMP_BRANCH $BASE $ORIG_BRANCH
+fi
+
+git branch --quiet -d $TEMP_BRANCH
