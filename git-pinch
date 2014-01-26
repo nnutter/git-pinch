@@ -11,7 +11,7 @@ configured upstream the command will abort.
 h                  show usage
 no-edit            do not edit message before committing
 p,preserve-merges  try to recreate merges instead of ignoring them
-upstream=          base off given commit instead of upstream
+u,upstream=          base off given commit instead of upstream
 "
 source "$(git --exec-path)/git-sh-setup"
 set_reflog_action pinch
@@ -26,7 +26,7 @@ while test $# -gt 0; do
     shift
     case $OPT in
         --) break ;;
-        --upstream) UPSTREAM="$1"; shift ;;
+        -u) UPSTREAM="$1"; shift ;;
         --no-edit) NO_EDIT="$OPT" ;;
         -p) PRESERVE_MERGES="$OPT" ;;
     esac
