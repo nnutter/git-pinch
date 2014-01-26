@@ -51,15 +51,18 @@ then
     die "You are not currently on a branch."
 fi
 
+COMMITS=("$@")
+for (( i = 0 ; i < $# ; i++ ))
+do
+    COMMITS[$i]=$(git rev-parse --verify ${COMMITS[$i]})
+done
+
 # rewind to upstream
 git reset --quiet --hard $UPSTREAM
 
 BASE=$UPSTREAM
-for COMMIT in "$@"
+for COMMIT in "${COMMITS[@]}"
 do
-    # expand commit hash as a means to normalize it
-    COMMIT=$(git rev-parse --verify $COMMIT)
-
     git branch --quiet --force $TEMP_BRANCH $COMMIT
 
     # the first commit has linear history so the rebase is unnecessary

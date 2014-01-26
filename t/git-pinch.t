@@ -1,7 +1,7 @@
 use strict;
 use warnings;
 
-use Test::More tests => 1;
+use Test::More tests => 2;
 
 use Cwd qw(abs_path);
 use File::Basename qw(dirname);
@@ -11,6 +11,13 @@ use IO::File qw();
 use Test::Git qw(test_repository);
 
 setup_path();
+
+subtest 'with refs' => sub {
+    plan tests => 10;
+    my $r = test_repository();
+    setup($r);
+    test_pinch($r, 'HEAD~4', 'HEAD~1');
+};
 
 subtest 'single pinch' => sub {
     plan tests => 5;
