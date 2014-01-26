@@ -21,7 +21,7 @@ subtest 'single pinch' => sub {
     is(scalar(@change_ids), 5, 'count of @change_ids');
 
     my $upstream = $r->find_change($change_ids[0])->commit;
-    $r->run('branch', 'before');
+    $r->run('branch', '--force', 'before');
 
     my ($start, $end) = (1, $#change_ids);
     for my $index ($start..$end) {
@@ -33,37 +33,8 @@ subtest 'single pinch' => sub {
 
             diag 'Initial graph:';
             diag join("\n", $r->run('log', '--oneline', '--graph')), "\n";
-
-            # safeguard to verify we reset correctly
-            is($r->find_change($change_ids[-1])->commit, $r->run('rev-parse', 'HEAD'),
-                'last change is HEAD');
-
             my $commit = $r->find_change($change_ids[$index])->commit;
-            $r->run('pinch', '--upstream', $upstream, $commit);
-
-            for my $change_id (@change_ids[0..$index]) {
-                my $before = $r->find_change($change_id, 'refs/heads/before');
-                my $after  = $r->find_change($change_id, 'refs/heads/master');
-                is($after->commit, $before->commit, "commits match for $change_id");
-            }
-
-            for my $change_id (@change_ids[($index + 1)..$end]) {
-                my $before = $r->find_change($change_id, 'refs/heads/before');
-                my $after  = $r->find_change($change_id, 'refs/heads/master');
-                isnt($after->commit, $before->commit, "commits do not match for $change_id");
-            }
-
-            my @before = $r->log('refs/heads/before');
-            my @master = $r->log('refs/heads/master');
-            is(scalar(@before), scalar(@change_ids), 'before has correct number of commits');
-            is(scalar(@master), scalar(@change_ids) + 1, 'master has an extra commit (merge)');
-
-            my @merge = grep { !$_->change_id } @master;
-            is(scalar(@merge), 1, 'found one merge commit');
-            my @parents = $merge[0]->parent;
-            my @expected_parents = ($upstream, $commit);
-            is_deeply(\@parents, \@expected_parents, 'merge commit has correct parents');
-
+            test_pinch($r, $upstream, $commit);
             diag 'Final graph:';
             diag join("\n", $r->run('log', '--oneline', '--graph')), "\n";
         };
@@ -109,4 +80,59 @@ sub cwrite {
     $repo->run('add', $path);
     my $verb = {'w' => 'add', 'a' => 'update'}->{$mode};
     $repo->run('commit', '-m', "$verb $filename", '--', $path);
+}
+
+sub test_pinch {
+    my $r = shift;
+    my $upstream = shift;
+    my $commit = shift;
+
+    my $upstream_sha = $r->run('rev-parse', '--verify', $upstream);
+    my $commit_sha = $r->run('rev-parse', '--verify', $commit);
+
+    $r->run('branch', '--force', 'before');
+    my @before = reverse $r->log('refs/heads/before');
+
+    my $before_bit = 1;
+    my (@change_ids, @before_changes, @after_changes);
+    for my $log (@before) {
+        push @change_ids, $log->change_id;
+        if ($before_bit) {
+            push @before_changes, $log;
+        } else {
+            push @after_changes, $log;
+        }
+        if ($log->commit eq $commit_sha) {
+            $before_bit = 0;
+        }
+    }
+
+    is($r->find_change($change_ids[-1])->commit, $r->run('rev-parse', 'HEAD'),
+        'last change is HEAD');
+
+    $r->run('pinch', '--upstream', $upstream, $commit);
+
+    for my $log (@before_changes) {
+        my $change_id = $log->change_id;
+        my $before = $r->find_change($change_id, 'refs/heads/before');
+        my $after  = $r->find_change($change_id, 'refs/heads/master');
+        is($after->commit, $before->commit, "commits match for $change_id");
+    }
+
+    for my $log (@after_changes) {
+        my $change_id = $log->change_id;
+        my $before = $r->find_change($change_id, 'refs/heads/before');
+        my $after  = $r->find_change($change_id, 'refs/heads/master');
+        isnt($after->commit, $before->commit, "commits do not match for $change_id");
+    }
+
+    my @master = $r->log('refs/heads/master');
+    is(scalar(@before), scalar(@change_ids), 'before has correct number of commits');
+    is(scalar(@master), scalar(@change_ids) + 1, 'master has an extra commit (merge)');
+
+    my @merge = grep { !$_->change_id } @master;
+    is(scalar(@merge), 1, 'found one merge commit');
+    my @parents = $merge[0]->parent;
+    my @expected_parents = ($upstream_sha, $commit_sha);
+    is_deeply(\@parents, \@expected_parents, 'merge commit has correct parents');
 }
