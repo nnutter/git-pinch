@@ -1,7 +1,7 @@
 use strict;
 use warnings;
 
-use Test::More tests => 2;
+use Test::More tests => 5;
 
 use Cwd qw(abs_path);
 use File::Basename qw(dirname);
@@ -12,41 +12,27 @@ use Test::Git qw(test_repository);
 
 setup_path();
 
-subtest 'with refs' => sub {
+my $r = test_repository();
+my @change_ids = setup($r);
+$r->run('branch', '--force', 'before');
+
+$r->run('reset', '--hard', 'before');
+subtest 'pinch --upstream HEAD~4 HEAD~1' => sub {
     plan tests => 10;
-    my $r = test_repository();
-    setup($r);
     test_pinch($r, 'HEAD~4', 'HEAD~1');
 };
 
-subtest 'single pinch' => sub {
-    plan tests => 5;
-
-    my $r = test_repository();
-    my @change_ids = setup($r);
-
-    is(scalar(@change_ids), 5, 'count of @change_ids');
-
-    my $upstream = $r->find_change($change_ids[0])->commit;
-    $r->run('branch', '--force', 'before');
-
-    my ($start, $end) = (1, $#change_ids);
-    for my $index ($start..$end) {
-        my $name = $change_ids[$index];
-        subtest "pinch at $name" => sub {
-            plan tests => 10;
-
-            $r->run('reset', '--hard', 'before');
-
-            diag 'Initial graph:';
-            diag join("\n", $r->run('log', '--oneline', '--graph')), "\n";
-            my $commit = $r->find_change($change_ids[$index])->commit;
-            test_pinch($r, $upstream, $commit);
-            diag 'Final graph:';
-            diag join("\n", $r->run('log', '--oneline', '--graph')), "\n";
-        };
-    }
-};
+my $upstream = $r->find_change($change_ids[0])->commit;
+my ($start, $end) = (1, $#change_ids);
+for my $index ($start..$end) {
+    $r->run('reset', '--hard', 'before');
+    my $name = $change_ids[$index];
+    my $commit = $r->find_change($change_ids[$index])->commit;
+    subtest "pinch --upstream $upstream $commit" => sub {
+        plan tests => 10;
+        test_pinch($r, $upstream, $commit);
+    };
+}
 
 sub setup_path {
     my $t_dir = dirname(__FILE__);
@@ -97,7 +83,6 @@ sub test_pinch {
     my $upstream_sha = $r->run('rev-parse', '--verify', $upstream);
     my $commit_sha = $r->run('rev-parse', '--verify', $commit);
 
-    $r->run('branch', '--force', 'before');
     my @before = reverse $r->log('refs/heads/before');
 
     my $before_bit = 1;
