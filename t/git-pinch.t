@@ -70,17 +70,6 @@ subtest 'single pinch' => sub {
     }
 };
 
-sub git_state {
-    my $repo = shift;
-    my $state = [];
-    my $log_iterator = $repo->log();
-    while (my $log = $log_iterator->next) {
-        my @attrs = qw(commit parent tree change_id);
-        push @{$state}, { map { $_ => $log->$_ } @attrs };
-    }
-    return $state;
-}
-
 sub setup_path {
     my $t_dir = dirname(__FILE__);
     my $parent_dir = abs_path(File::Spec->join($t_dir, '..'));
