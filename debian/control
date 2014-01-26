@@ -1,0 +1,12 @@
+Source: git-pinch
+Section: vcs
+Priority: optional
+Build-Depends: debhelper (>= 7)
+Maintainer: Nathaniel Nutter <nnutter@genome.wustl.edu>
+Homepage: https://github.com/nnutter/git-pinch
+Bugs: https://github.com/nnutter/git-pinch/issues
+
+Package: git-pinch
+Architecture: any
+Depends: git | git-core
+Description: Git extension to enable "retroactive" creation of feature branches
