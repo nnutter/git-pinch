@@ -1,3 +1,9 @@
+git-pinch (0.01-2) lucid; urgency=low
+
+  * Skip tests when building package.
+
+ -- Nathaniel Nutter <nnutter@genome.wustl.edu>  Sun, 26 Jan 2014 12:03:41 -0600
+
 git-pinch (0.01-1) lucid; urgency=low
 
   * Initial release.
