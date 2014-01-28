@@ -1,4 +1,4 @@
-% GIT-PINCH(1) git-pinch 0.01 | git-pinch User Manuals
+% GIT-PINCH(1) git-pinch 0.02 | git-pinch User Manuals
 % Nathaniel Nutter \<git-pinch@nnutter.com\>
 % January 27, 2014
 
