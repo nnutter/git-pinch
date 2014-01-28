@@ -1,3 +1,9 @@
+git-pinch (0.02-1) lucid; urgency=low
+
+  * Manual page is now included.
+
+ -- Nathaniel Nutter <nnutter@genome.wustl.edu>  Mon, 27 Jan 2014 22:57:27 -0600
+
 git-pinch (0.01-2) lucid; urgency=low
 
   * Skip tests when building package.
