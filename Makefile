@@ -21,6 +21,9 @@ install:
 	@install -d $(DESTDIR)$(bindir)
 	@install git-pinch $(DESTDIR)$(bindir)/git-pinch
 
+install-docs: docs
+	@install git-pinch.1 $(DESTDIR)$(mandir)/man1/git-pinch.1
+
 test:
 	carton install
 	carton exec -- prove -lvr t
@@ -28,4 +31,4 @@ test:
 all: install
 	@true
 
-.PHONY: all build clean install test docs
+.PHONY: all build clean install test docs install-docs
