@@ -32,9 +32,9 @@ while test $# -gt 0; do
     esac
 done
 
-if test $# -lt 1
+if test $# -eq 0
 then
-    die "Must provide a list of commits to pinch."
+    set -- HEAD
 fi
 
 set -o errexit
